@@ -1,39 +1,57 @@
-import pytest
-from selenium import webdriver
-from selenium.webdriver.safari.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-import undetected_chromedriver as uc
 import random
+import time
+import pytest
+from playwright.sync_api import sync_playwright
+
+
+def warm_up(page):
+    time.sleep(random.uniform(3.0, 5.0))
+
+    for scroll_to in [300, 600, 900, 600, 300, 0]:
+        page.evaluate(f"window.scrollTo({{top: {scroll_to}, behavior: 'smooth'}})")
+        time.sleep(random.uniform(0.5, 1.2))
+
+    time.sleep(random.uniform(2.0, 3.0))
 
 
 @pytest.fixture(scope="session")
 def browser():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            channel="chrome",
+            args=[
+                "--no-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+            ],
+        )
 
-    options = uc.ChromeOptions()
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument(f"--window-size={random.randint(1200, 1920)},{random.randint(800, 1080)}")
-    options.add_argument("--lang=en-US,en;q=0.9")
+        context = browser.new_context(
+            locale="en-US",
+            viewport={"width": random.randint(1280, 1920), "height": random.randint(800, 1080)},
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/148.0.0.0 Safari/537.36"
+            ),
+        )
 
-    # Реальный user-agent (обновляй актуальным)
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
-
-    driver = uc.Chrome(options=options, headless=False)
-
-    # Скрыть webdriver флаг
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3]});
-            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             window.chrome = { runtime: {} };
-        """
-    })
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) =>
+                parameters.name === 'notifications'
+                    ? Promise.resolve({ state: Notification.permission })
+                    : originalQuery(parameters);
+        """)
 
-    yield driver
+        page = context.new_page()
+        page.goto("https://tidal.com")
+        # warm_up(page)
 
-    driver.quit()
+        yield page
+
+        context.close()
+        browser.close()

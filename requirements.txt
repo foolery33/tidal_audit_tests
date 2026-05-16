@@ -3,5 +3,5 @@ requests
 pyyaml
 playwright
 selenium
-undetected-chromedriver
 webdriver-manager
+chromium

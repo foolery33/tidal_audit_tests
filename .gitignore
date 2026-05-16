@@ -2,4 +2,5 @@ venv/
 __pycache__/
 .pytest_cache/
 .playwright/
-data/cookies.json
+html_pages/
+artifacts/
