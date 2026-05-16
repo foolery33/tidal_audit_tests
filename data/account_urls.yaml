@@ -1,0 +1,23 @@
+- name: Профиль
+  url: https://account.tidal.com/profile
+  html_path: html_pages/Account - Profile - TIDAL.html
+
+- name: Подписка
+  url: https://account.tidal.com/subscription
+  html_path: html_pages/Account - Subscription - TIDAL.html
+
+- name: Оплата
+  url: https://account.tidal.com/payment
+  html_path: html_pages/Account - Payment _ TIDAL.html
+
+- name: Уведомления
+  url: https://account.tidal.com/notifications
+  html_path: html_pages/Account - Notifications _ TIDAL.html
+
+- name: Офлайн-устройства
+  url: https://account.tidal.com/offline-devices
+  html_path: html_pages/Account - Offline Devices _ TIDAL.html
+
+- name: Активация кода
+  url: https://account.tidal.com/redeem
+  html_path: html_pages/Account - Redeem _ TIDAL.html

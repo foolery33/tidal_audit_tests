@@ -2,5 +2,7 @@ venv/
 __pycache__/
 .pytest_cache/
 .playwright/
+.auth/
 html_pages/
 artifacts/
+node_modules/

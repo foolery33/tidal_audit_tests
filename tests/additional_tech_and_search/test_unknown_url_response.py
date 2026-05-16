@@ -63,7 +63,7 @@ def wait_for_not_found_placeholder(page) -> bool:
 
 
 def save_debug_artifacts(page, test_name: str) -> None:
-    artifacts_dir = Path("artifacts")
+    artifacts_dir = Path("../artifacts")
     artifacts_dir.mkdir(exist_ok=True)
 
     safe_name = (
