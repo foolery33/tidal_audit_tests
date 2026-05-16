@@ -1,0 +1,26 @@
+- name: Главная страница
+  url: https://tidal.com/
+
+- name: Исследование каталога
+  url: https://tidal.com/view/pages/explore
+
+- name: Поиск
+  url: https://tidal.com/search?q=lola%20young
+
+- name: Страница плейлиста
+  url: https://tidal.com/playlist/7475b9fb-c4b7-4188-8d3f-b88181c5eeb7
+
+- name: Страница исполнителя
+  url: https://tidal.com/artist/30416609
+
+- name: Страница альбома
+  url: https://tidal.com/album/432708332
+
+- name: Страница трека
+  url: https://tidal.com/album/369342737/track/369342742
+
+- name: Публичный профиль
+  url: https://tidal.com/@pereiro
+
+- name: Настроения и активности
+  url: https://tidal.com/view/pages/moods_page
