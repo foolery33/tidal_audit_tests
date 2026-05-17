@@ -8,28 +8,20 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 
-AUTH_STATE_PATH = Path(__file__).resolve().parents[1] / ".auth" / "tidal.json"
-CHROME_PROFILE_PATH = Path(
-    "/Users/admin/Library/Application Support/Google/Chrome/Profile 3"
-)
-USE_CHROME_PROFILE = False
-CHROME_USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/148.0.0.0 Safari/537.36"
-)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+AUTH_STATE_PATH = PROJECT_ROOT / ".auth" / "tidal.json"
+DEFAULT_CHROME_USER_DATA_DIR = PROJECT_ROOT / ".chrome-user-data"
+CHROME_USER_AGENT = os.getenv("TIDAL_CHROME_USER_AGENT")
 SAFARI_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) "
     "Version/18.0 Safari/605.1.15"
 )
-SUPPORTED_BROWSERS = ("chrome", "safari", "webkit")
-# Change this value for PyCharm runs: "chrome", "safari", or "webkit".
-# Set to None to use --tidal-browser, TIDAL_BROWSER, or the default Chrome.
-FORCED_BROWSER = "chrome"
+SUPPORTED_BROWSERS = ("chrome", "firefox", "safari", "webkit")
+FORCED_BROWSER = "firefox"
 SCREEN_SIZE = {"width": 1920, "height": 1080}
 TIMEZONE_ID = os.getenv("TIDAL_TIMEZONE", "America/New_York")
-HUMAN_BEHAVIOR_ENABLED = os.getenv("TIDAL_HUMAN_BEHAVIOR", "1") != "0"
+HUMAN_BEHAVIOR_ENABLED = True
 PAGE_LOAD_DELAY_RANGE = (1.8, 4.5)
 ACTION_DELAY_RANGE = (0.35, 1.35)
 SCROLL_STEP_RANGE = (180, 520)
@@ -39,8 +31,15 @@ CHROME_LAUNCH_ARGS = [
     "--disable-blink-features=AutomationControlled",
     "--disable-dev-shm-usage",
     "--disable-infobars",
-    "--start-maximized",
 ]
+
+
+def env_flag(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def pytest_addoption(parser):
@@ -49,7 +48,28 @@ def pytest_addoption(parser):
         action="store",
         choices=SUPPORTED_BROWSERS,
         default=None,
-        help="Browser for Playwright tests: chrome or safari/webkit.",
+        help="Browser for Playwright tests: chrome, firefox, or safari/webkit.",
+    )
+    parser.addoption(
+        "--tidal-persistent-chrome",
+        action="store_true",
+        default=False,
+        help="Run tests in installed Chrome with a persistent user data directory.",
+    )
+    parser.addoption(
+        "--tidal-chrome-user-data-dir",
+        action="store",
+        default=None,
+        help=(
+            "User data directory for --tidal-persistent-chrome. "
+            "Defaults to .chrome-user-data in the project root."
+        ),
+    )
+    parser.addoption(
+        "--tidal-chrome-profile-directory",
+        action="store",
+        default=None,
+        help="Optional Chrome profile directory name, for example 'Profile 3'.",
     )
 
 
@@ -160,8 +180,12 @@ def get_context_options(browser_name, *, use_storage_state=True):
             "DNT": "1",
             "Upgrade-Insecure-Requests": "1",
         },
-        "user_agent": SAFARI_USER_AGENT if browser_name == "webkit" else CHROME_USER_AGENT,
     }
+
+    if browser_name == "webkit":
+        context_options["user_agent"] = SAFARI_USER_AGENT
+    elif CHROME_USER_AGENT:
+        context_options["user_agent"] = CHROME_USER_AGENT
 
     if use_storage_state and AUTH_STATE_PATH.exists():
         context_options["storage_state"] = str(AUTH_STATE_PATH)
@@ -171,6 +195,13 @@ def get_context_options(browser_name, *, use_storage_state=True):
 
 def add_init_scripts(context, browser_name):
     if browser_name == "webkit":
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+        """)
+        return
+
+    if browser_name == "firefox":
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
@@ -198,23 +229,35 @@ def playwright_instance():
 
 
 @pytest.fixture(scope="session")
-def persistent_chrome_context(playwright_instance, browser_name):
-    if browser_name != "chrome" or not USE_CHROME_PROFILE:
+def persistent_chrome_context(playwright_instance, browser_name, pytestconfig):
+    use_persistent_chrome = (
+        pytestconfig.getoption("--tidal-persistent-chrome")
+        or env_flag("TIDAL_USE_PERSISTENT_CHROME")
+    )
+    if browser_name != "chrome" or not use_persistent_chrome:
         yield None
         return
 
-    if not CHROME_PROFILE_PATH.exists():
-        raise pytest.UsageError(f"Chrome profile not found: {CHROME_PROFILE_PATH}")
+    user_data_dir = Path(
+        pytestconfig.getoption("--tidal-chrome-user-data-dir")
+        or os.getenv("TIDAL_CHROME_USER_DATA_DIR")
+        or DEFAULT_CHROME_USER_DATA_DIR
+    )
+    profile_directory = (
+        pytestconfig.getoption("--tidal-chrome-profile-directory")
+        or os.getenv("TIDAL_CHROME_PROFILE_DIRECTORY")
+    )
 
-    print(f"TIDAL tests browser: chrome profile {CHROME_PROFILE_PATH}")
+    print(f"TIDAL tests browser: installed chrome profile {user_data_dir}")
+    launch_args = list(CHROME_LAUNCH_ARGS)
+    if profile_directory:
+        launch_args.append(f"--profile-directory={profile_directory}")
+
     context = playwright_instance.chromium.launch_persistent_context(
-        user_data_dir=str(CHROME_PROFILE_PATH.parent),
+        user_data_dir=str(user_data_dir),
         headless=False,
         channel="chrome",
-        args=[
-            *CHROME_LAUNCH_ARGS,
-            f"--profile-directory={CHROME_PROFILE_PATH.name}",
-        ],
+        args=launch_args,
         **get_context_options(browser_name, use_storage_state=False),
     )
     add_init_scripts(context, browser_name)
@@ -233,6 +276,9 @@ def playwright_browser(playwright_instance, browser_name, persistent_chrome_cont
     if browser_name == "webkit":
         print("TIDAL tests browser: safari/webkit")
         browser = playwright_instance.webkit.launch(headless=False)
+    elif browser_name == "firefox":
+        print("TIDAL tests browser: firefox")
+        browser = playwright_instance.firefox.launch(headless=False)
     else:
         print("TIDAL tests browser: chrome")
         browser = playwright_instance.chromium.launch(

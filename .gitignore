@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .playwright/
 .auth/
+.chrome-user-data/
 html_pages/
 artifacts/
 node_modules/

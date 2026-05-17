@@ -9,7 +9,8 @@ from tests.helpers import load_yaml, is_tidal_domain
 
 
 UNKNOWN_URLS = load_yaml("data/unknown_urls.yaml")
-NOT_FOUND_HTML_PATH = Path(__file__).resolve().parents[1] / "html_pages" / "TIDAL_not_found.html"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+NOT_FOUND_HTML_PATH = PROJECT_ROOT / "html_pages" / "TIDAL_not_found.html"
 
 
 ANTIBOT_MARKERS = [
@@ -63,7 +64,7 @@ def wait_for_not_found_placeholder(page) -> bool:
 
 
 def save_debug_artifacts(page, test_name: str) -> None:
-    artifacts_dir = Path("../artifacts")
+    artifacts_dir = PROJECT_ROOT / "artifacts"
     artifacts_dir.mkdir(exist_ok=True)
 
     safe_name = (
