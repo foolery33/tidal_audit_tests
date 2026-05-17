@@ -5,9 +5,9 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from tests.helpers import is_tidal_domain
 
 
-ALBUM_TITLE = "Cruel, Cruel World"
-ALBUM_URL = "https://tidal.com/album/432708332"
-ALBUM_PATH = "/album/432708332"
+ALBUM_TITLE = "THIS MUSIC MAY CONTAIN HOPE."
+ALBUM_URL = "https://tidal.com/album/509536310"
+ALBUM_PATH = "/album/509536310"
 
 ERROR_MARKERS = [
     "403 forbidden",

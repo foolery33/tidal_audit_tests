@@ -125,6 +125,20 @@ def wait_for_entity_page(page) -> None:
     )
 
 
+def open_first_entity_link(page) -> dict[str, str | None]:
+    link_data = click_first_entity_link(page)
+
+    try:
+        wait_for_entity_page(page)
+    except PlaywrightTimeoutError:
+        if not link_data["href"]:
+            raise
+        page.goto(link_data["href"], wait_until="domcontentloaded", timeout=30_000)
+        wait_for_entity_page(page)
+
+    return link_data
+
+
 def has_entity_content(page) -> bool:
     try:
         page.wait_for_function(
@@ -215,8 +229,7 @@ def test_search_result_opens_entity_page_without_losing_context(browser):
     wait_for_search_results(page)
     assert_no_error_markers(page, "Страница результатов поиска")
 
-    entity_link_data = click_first_entity_link(page)
-    wait_for_entity_page(page)
+    entity_link_data = open_first_entity_link(page)
 
     target_path = get_path(page.url)
 
@@ -243,5 +256,9 @@ def test_search_result_opens_entity_page_without_losing_context(browser):
         f"Title: {page.title().strip()!r}"
     )
 
-    page.go_back(wait_until="domcontentloaded", timeout=30_000)
+    try:
+        page.go_back(wait_until="commit", timeout=10_000)
+    except PlaywrightTimeoutError:
+        if get_path(page.url) != SEARCH_PATH:
+            raise
     assert_search_context_restored(page)

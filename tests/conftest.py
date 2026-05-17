@@ -45,9 +45,13 @@ def env_range(name, default):
 
 # Настройки эмуляции поведения человека (сохранены из твоей сборки)
 HUMAN_BEHAVIOR_ENABLED = env_flag("TIDAL_HUMAN_BEHAVIOR", True)
-PAGE_LOAD_DELAY_RANGE = env_range("TIDAL_PAGE_LOAD_DELAY", (5.0, 10.0))
-ACTION_DELAY_RANGE = env_range("TIDAL_ACTION_DELAY", (1.0, 3.0))
-INTER_TEST_DELAY_RANGE = env_range("TIDAL_INTER_TEST_DELAY", (8.0, 18.0))
+PAGE_LOAD_DELAY_RANGE = env_range("TIDAL_PAGE_LOAD_DELAY", (1.0, 2.5))
+ACTION_DELAY_RANGE = env_range("TIDAL_ACTION_DELAY", (0.3, 1.0))
+INTER_TEST_DELAY_RANGE = env_range("TIDAL_INTER_TEST_DELAY", (2.0, 5.0))
+STARTUP_DELAY_RANGE = env_range("TIDAL_STARTUP_DELAY", (0.5, 1.0))
+POST_HOME_DELAY_RANGE = env_range("TIDAL_POST_HOME_DELAY", (0.5, 1.2))
+WARM_UP_INITIAL_DELAY_RANGE = env_range("TIDAL_WARM_UP_INITIAL_DELAY", (0.5, 1.0))
+WARM_UP_FINAL_DELAY_RANGE = env_range("TIDAL_WARM_UP_FINAL_DELAY", (0.3, 0.8))
 SCROLL_STEP_RANGE = (180, 520)
 MOUSE_MOVE_STEP_RANGE = (8, 18)
 
@@ -108,10 +112,10 @@ def scroll_like_user(page):
 
 
 def warm_up(page):
-    human_pause(2.5, 5.5)
+    human_pause(*WARM_UP_INITIAL_DELAY_RANGE)
     move_mouse_like_user(page)
     scroll_like_user(page)
-    human_pause(1.0, 2.5)
+    human_pause(*WARM_UP_FINAL_DELAY_RANGE)
 
 
 def install_humanized_goto(page):
@@ -142,7 +146,7 @@ def playwright_instance():
         yield p
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def browser(playwright_instance, pytestconfig):
     # Приоритет выбора ID: флаг --bitbrowser-id -> ENV -> дефолт из кода
     profile_id = (
@@ -209,9 +213,9 @@ def browser(playwright_instance, pytestconfig):
 
         install_humanized_goto(page)
 
-        time.sleep(random.uniform(1.5, 3.0))
+        time.sleep(random.uniform(*STARTUP_DELAY_RANGE))
         page.goto("https://tidal.com", timeout=60000)
-        time.sleep(random.uniform(2.0, 4.0))
+        time.sleep(random.uniform(*POST_HOME_DELAY_RANGE))
         warm_up(page)
 
         yield page

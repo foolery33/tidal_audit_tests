@@ -1,5 +1,7 @@
 from urllib.parse import urlparse
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from tests.helpers import is_tidal_domain
 
 
@@ -18,8 +20,8 @@ PUBLIC_ROUTE_CHAIN = [
     },
     {
         "name": "Страница альбома",
-        "url": "https://tidal.com/album/432708332",
-        "path": "/album/432708332",
+        "url": "https://tidal.com/album/509536310",
+        "path": "/album/509536310",
         "state": "album",
     },
 ]
@@ -95,8 +97,8 @@ def wait_for_expected_state(page, route: dict[str, str]) -> None:
 
             if (route.state === "album") {
                 return Boolean(
-                    /cruel, cruel world/i.test(title)
-                    || /cruel, cruel world/i.test(mainText)
+                    /this music may contain hope/i.test(title)
+                    || /this music may contain hope/i.test(mainText)
                     || main.querySelector('a[href*="/track/"]')
                     || main.querySelector('[data-test="track-row"]')
                     || main.querySelector('[data-test="media-item"]')
@@ -152,34 +154,50 @@ def open_route(page, route: dict[str, str]) -> None:
     assert_route_state(page, route, "Прямой переход")
 
 
+def go_back_to_route(page, route: dict[str, str]) -> None:
+    try:
+        page.go_back(wait_until="commit", timeout=10_000)
+    except PlaywrightTimeoutError:
+        if get_path(page.url) != route["path"]:
+            raise
+
+
+def go_forward_to_route(page, route: dict[str, str]) -> None:
+    try:
+        page.go_forward(wait_until="commit", timeout=10_000)
+    except PlaywrightTimeoutError:
+        if get_path(page.url) != route["path"]:
+            raise
+
+
 def test_browser_back_and_forward_keep_expected_public_route_state(browser):
     page = browser
 
     for route in PUBLIC_ROUTE_CHAIN:
         open_route(page, route)
 
-    page.go_back(wait_until="domcontentloaded", timeout=30_000)
+    go_back_to_route(page, PUBLIC_ROUTE_CHAIN[1])
     assert_route_state(
         page,
         PUBLIC_ROUTE_CHAIN[1],
         "Первый переход назад браузерной навигацией",
     )
 
-    page.go_back(wait_until="domcontentloaded", timeout=30_000)
+    go_back_to_route(page, PUBLIC_ROUTE_CHAIN[0])
     assert_route_state(
         page,
         PUBLIC_ROUTE_CHAIN[0],
         "Второй переход назад браузерной навигацией",
     )
 
-    page.go_forward(wait_until="domcontentloaded", timeout=30_000)
+    go_forward_to_route(page, PUBLIC_ROUTE_CHAIN[1])
     assert_route_state(
         page,
         PUBLIC_ROUTE_CHAIN[1],
         "Первый переход вперед браузерной навигацией",
     )
 
-    page.go_forward(wait_until="domcontentloaded", timeout=30_000)
+    go_forward_to_route(page, PUBLIC_ROUTE_CHAIN[2])
     assert_route_state(
         page,
         PUBLIC_ROUTE_CHAIN[2],

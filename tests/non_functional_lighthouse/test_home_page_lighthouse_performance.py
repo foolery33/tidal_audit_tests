@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import pytest
 
 from tests.helpers import PROJECT_ROOT, is_tidal_domain
+from tests.non_functional_lighthouse.lighthouse_runner import run_lighthouse as run_lighthouse_in_bitbrowser
 
 
 HOME_URL = "https://tidal.com/"
@@ -44,6 +45,21 @@ def get_lighthouse_command() -> list[str]:
     if lighthouse_bin:
         return [lighthouse_bin]
 
+    windows_node_bin = Path(r"C:\Program Files\nodejs\node.exe")
+    local_lighthouse_cli = PROJECT_ROOT / "node_modules" / "lighthouse" / "cli" / "index.js"
+
+    if windows_node_bin.exists() and local_lighthouse_cli.exists():
+        return [str(windows_node_bin), str(local_lighthouse_cli)]
+
+    local_lighthouse_bins = [
+        PROJECT_ROOT / "node_modules" / ".bin" / "lighthouse.cmd",
+        PROJECT_ROOT / "node_modules" / ".bin" / "lighthouse",
+    ]
+
+    for local_lighthouse_bin in local_lighthouse_bins:
+        if local_lighthouse_bin.exists():
+            return [str(local_lighthouse_bin)]
+
     lighthouse_bin = shutil.which("lighthouse")
 
     if lighthouse_bin:
@@ -56,6 +72,7 @@ def get_lighthouse_command() -> list[str]:
 
 
 def run_lighthouse(url: str, report_path: Path) -> dict:
+    return run_lighthouse_in_bitbrowser(url, report_path, "performance")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.unlink(missing_ok=True)
 
