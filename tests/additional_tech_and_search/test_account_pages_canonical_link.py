@@ -24,7 +24,7 @@ def test_account_page_has_canonical_link(browser, page_data):
         f"'{page_data['name']}'. Файл: {html_path}"
     )
 
-    page.set_content(html_path.read_text(encoding="utf-8"), wait_until="domcontentloaded")
+    page.set_content(html_path.read_text(encoding="utf-8"), wait_until="domcontentloaded", timeout=60000)
 
     canonical_href = page.evaluate(
         """

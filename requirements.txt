@@ -6,3 +6,6 @@ selenium
 webdriver-manager
 chromium
 lighthouse
+pytest-timeout
+playwright-stealth
+anty
